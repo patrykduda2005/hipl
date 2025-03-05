@@ -9,15 +9,25 @@ FS = {
         FILES = {},
     },
     getFileName = function(filePath)
-        local fileNameOffset = filePath:find("/[^/]*$") + 1
-        return filePath:sub(fileNameOffset)
+        local fileNameOffset = filePath:find("/[^/]*$")
+        if fileNameOffset ~= nil then
+            fileNameOffset = fileNameOffset + 1
+        else
+            fileNameOffset = 0
+        end
+        local output = filePath:sub(fileNameOffset)
+        if output == "" then return nil
+        else return output
+        end
     end,
     getFolderPath = function(filePath)
         return filePath:gsub("/[^/]*$", "")
     end,
     concatPaths = function(lhs, rhs)
+        if lhs == '' then return rhs end
+        if lhs:find("%.%.") ~= nil then return nil end
         --simple concat
-        if rhs:find("..") == nil then
+        if rhs:find("%.%.") == nil then
             if lhs:sub(-1) == '/' then
                 return lhs .. rhs
             end
@@ -36,6 +46,8 @@ FS = {
                 table.insert(pathBuilder, folderName)
             end
         end
+        local rhsFileName = FS.getFileName(rhs)
+        if rhsFileName == nil then return nil end
         table.insert(pathBuilder, FS.getFileName(rhs))
         local output = ""
         for _, folderName in pairs(pathBuilder) do
