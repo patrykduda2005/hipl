@@ -21,7 +21,45 @@ FS = {
         end
     end,
     getFolderPath = function(filePath)
-        return filePath:gsub("/[^/]*$", "")
+        return filePath:gsub("/[^/]*$", "") .. '/'
+    end,
+    getPathBuilder = function(filepath)
+        if filepath == nil then return nil end
+        local pathBuilder = {}
+        for folderName in string.gmatch(FS.getFolderPath(filepath), "[^/]*/") do
+            table.insert(pathBuilder, folderName)
+        end
+        local filename = FS.getFileName(filepath)
+        if filename ~= nil then
+            table.insert(pathBuilder, filename)
+        end
+        return pathBuilder
+    end,
+    convertToRelativePath = function(absoluteFilePath, relativeToFolderPath)
+        if absoluteFilePath == nil or relativeToFolderPath == nil then return nil end
+        local pathBuilder = {}
+        local afpPathBuilder = FS.getPathBuilder(FS.getFolderPath(absoluteFilePath))
+        local rtfpPathBuilder = FS.getPathBuilder(relativeToFolderPath)
+        local offsetToAppendTheRest = nil
+        for k, v in pairs(rtfpPathBuilder) do
+            if v == afpPathBuilder[k] then
+                offsetToAppendTheRest = k + 1
+            else
+                table.insert(pathBuilder, "../")
+            end
+        end
+        for i = offsetToAppendTheRest, #afpPathBuilder, 1 do
+            table.insert(pathBuilder, afpPathBuilder[i])
+        end
+
+        table.insert(pathBuilder, FS.getFileName(absoluteFilePath))
+
+        local output = ""
+        for _, folderName in pairs(pathBuilder) do
+            output = output .. folderName
+        end
+
+        return output
     end,
     concatPaths = function(lhs, rhs)
         if lhs == '' then return rhs end
@@ -93,7 +131,7 @@ FS = {
 
 local hashCommands = {
     ["include"] = function(filePath, currentFilename) --{{#include filepath}}
-        print("INLUDE; ", filePath .. "dupa; " .. currentFilename)
+        print("INLUDE; ", filePath .. "dupa; " .. FS.getFolderPath(currentFilename))
         local templatefilePath = FS.concatPaths(FS.getFolderPath(currentFilename), filePath)
         local f = io.open(templatefilePath, "r")
         if f == nil then
@@ -106,7 +144,7 @@ local hashCommands = {
             local start, ending = line:find("{{.*}}")
             if start then
                 local withoutBrackets = line:sub(start+2, ending-2)
-                replacementLine = extractCommand(withoutBrackets, templatefilePath)
+                replacementLine = extractCommand(withoutBrackets, templatefilePath, currentFilename)
             end
             includedContent = includedContent .. replacementLine .. "\n"
         end
@@ -120,14 +158,18 @@ local hashCommands = {
 }
 
 local templateCommands = {
-    ["filepath"] = function(hostFilePath, templatePOVPath) --{{!filepath templatePOVPath}}
-        print("curent file: " .. hostFilePath .. "template file; " .. templatePOVPath)
-        return FS.concatPaths(FS.getFolderPath(hostFilePath), templatePOVPath)
+    ["filepath"] = function(templateFilePath, filePathRelativeToTemplate, filePathOfTemplateHost) --{{!filepath templatePOVPath}}
+        print("template file: " .. templateFilePath .. " arg: " .. filePathRelativeToTemplate .. " current file: " .. filePathOfTemplateHost)
+        local hostFolderPath = FS.getFolderPath(templateFilePath)
+        local output =  FS.concatPaths(hostFolderPath:gsub(CONFIG.src_folder, CONFIG.dist_folder, 1), filePathRelativeToTemplate)
+        print("output: " .. output)
+        return output
         --TODO
+        --
     end
 }
 
-function extractCommand(thingy, filename) -- {{#command arg}} {{!command arg}}
+function extractCommand(thingy, filename, hostFilePath) -- {{#command arg}} {{!command arg}}
     local commandType = thingy:sub(1,1)
     if commandType == "#" then
         local middle = thingy:find(" ")
@@ -138,7 +180,7 @@ function extractCommand(thingy, filename) -- {{#command arg}} {{!command arg}}
         local middle = thingy:find(" ")
         local command = thingy:sub(2, middle-1)
         local commandArgs = thingy:sub(middle+1)
-        return templateCommands[command](filename, commandArgs)
+        return templateCommands[command](filename, commandArgs, hostFilePath)
     end
 end
 
@@ -158,7 +200,7 @@ local function compileFile(filePath)
         local start, ending = line:find("{{.*}}")
         if start then
             local withoutBrackets = line:sub(start+2, ending-2)
-            replacementLine = extractCommand(withoutBrackets, filePath)
+            replacementLine = extractCommand(withoutBrackets, filePath, filePath)
         end
         io.write(replacementLine .. "\n")
     end
