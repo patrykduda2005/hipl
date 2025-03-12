@@ -39,7 +39,7 @@ FS = {
         if absoluteFilePath == nil or relativeToFolderPath == nil then return nil end
         local pathBuilder = {}
         local afpPathBuilder = FS.getPathBuilder(FS.getFolderPath(absoluteFilePath))
-        local rtfpPathBuilder = FS.getPathBuilder(relativeToFolderPath)
+        local rtfpPathBuilder = FS.getPathBuilder(FS.getFolderPath(relativeToFolderPath))
         local offsetToAppendTheRest = nil
         for k, v in pairs(rtfpPathBuilder) do
             if v == afpPathBuilder[k] then
@@ -159,13 +159,9 @@ local hashCommands = {
 
 local templateCommands = {
     ["filepath"] = function(templateFilePath, filePathRelativeToTemplate, filePathOfTemplateHost) --{{!filepath templatePOVPath}}
-        print("template file: " .. templateFilePath .. " arg: " .. filePathRelativeToTemplate .. " current file: " .. filePathOfTemplateHost)
-        local hostFolderPath = FS.getFolderPath(templateFilePath)
-        local output =  FS.concatPaths(hostFolderPath:gsub(CONFIG.src_folder, CONFIG.dist_folder, 1), filePathRelativeToTemplate)
-        print("output: " .. output)
+        local globalPath = FS.concatPaths(FS.getFolderPath(templateFilePath), filePathRelativeToTemplate)
+        local output = FS.convertToRelativePath(globalPath, FS.getFolderPath(filePathOfTemplateHost))
         return output
-        --TODO
-        --
     end
 }
 
@@ -231,4 +227,4 @@ local function openFolderAndPerformOperations(folderPath)
 end
 
 
---openFolderAndPerformOperations(CONFIG.src_folder)
+openFolderAndPerformOperations(CONFIG.src_folder)
