@@ -151,8 +151,12 @@ local hashCommands = {
             local start, ending = line:find("{{.*}}")
             if start then
                 local withoutBrackets = line:sub(start+2, ending-2)
-                replacementLine = extractCommand(withoutBrackets, templatefilePath, currentFilename)
+                replacementLine = string.gsub(line, "{{.*}}", extractCommand(withoutBrackets, templatefilePath, currentFilename))
             end
+            --if start then
+            --    local withoutBrackets = line:sub(start+2, ending-2)
+            --    replacementLine = extractCommand(withoutBrackets, templatefilePath, currentFilename)
+            --end
             includedContent = includedContent .. replacementLine .. "\n"
         end
         f:close()
