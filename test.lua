@@ -7,30 +7,30 @@ local function test_concatPaths()
 
     lhs = "./src/index/randomword/"
     rhs = "../../hipls/navincluder.hipl"
-    o = FS.concatPaths(lhs, rhs)
+    o = PATH.concatPaths(lhs, rhs)
     assert(o == "./src/hipls/navincluder.hipl",
-        "Function FS.concatPaths(lhs, rhs) test failed:"
+        "Function PATH.concatPaths(lhs, rhs) test failed:"
         .. " lhs: " .. lhs .. " rhs: " .. rhs .. " got: " .. o)
 
     lhs = "./src/hipl/"
     rhs = "file.html"
-    o = FS.concatPaths(lhs, rhs)
+    o = PATH.concatPaths(lhs, rhs)
     assert(o == "./src/hipl/file.html",
-        "Function FS.concatPaths(lhs, rhs) test failed:"
+        "Function PATH.concatPaths(lhs, rhs) test failed:"
         .. " lhs: " .. lhs .. " rhs: " .. rhs .. " got: " .. o)
 
     lhs = ""
     rhs = "file.html"
-    o = FS.concatPaths(lhs, rhs)
+    o = PATH.concatPaths(lhs, rhs)
     assert(o == "file.html",
-        "Function FS.concatPaths(lhs, rhs) test failed:"
+        "Function PATH.concatPaths(lhs, rhs) test failed:"
         .. " lhs: " .. lhs .. " rhs: " .. rhs .. " got: " .. o)
 
     lhs = "./../"
     rhs = "whatever"
-    o = FS.concatPaths(lhs, rhs)
+    o = PATH.concatPaths(lhs, rhs)
     assert(o == nil,
-        "Function FS.concatPaths(lhs, rhs) test failed:"
+        "Function PATH.concatPaths(lhs, rhs) test failed:"
         .. " lhs: " .. lhs .. " rhs: " .. rhs)
 
 end
@@ -41,23 +41,23 @@ local function test_convertToRelativePath()
     local o = ""
     absoluteFilePath = "./src/hipls/navincluder.hipl"
     relativeToFolderPath = "./src/index/"
-    o = FS.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
+    o = PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
     assert(o == "../hipls/navincluder.hipl",
-        "Function FS.convertToRelativePath(absoluteFilePath, relativeToFolderPath) test failed:"
+        "Function PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath) test failed:"
         .. " absoluteFilePath: " .. absoluteFilePath .. " relativeToFolderPath: " .. relativeToFolderPath .. " got: " .. o)
 
     absoluteFilePath = "./src/hipls/navincluder.hipl"
     relativeToFolderPath = "./src/index/andrew/different/folder/"
-    o = FS.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
+    o = PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
     assert(o == "../../../../hipls/navincluder.hipl",
-        "Function FS.convertToRelativePath(absoluteFilePath, relativeToFolderPath) test failed:"
+        "Function PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath) test failed:"
         .. " absoluteFilePath: " .. absoluteFilePath .. " relativeToFolderPath: " .. relativeToFolderPath .. " got: " .. o)
 
     absoluteFilePath = "./src/index/andrew/different/folder/navincluder.hipl"
     relativeToFolderPath = "./src/hipls/"
-    o = FS.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
+    o = PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
     assert(o == "../index/andrew/different/folder/navincluder.hipl",
-        "Function FS.convertToRelativePath(absoluteFilePath, relativeToFolderPath) test failed:"
+        "Function PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath) test failed:"
         .. " absoluteFilePath: " .. absoluteFilePath .. " relativeToFolderPath: " .. relativeToFolderPath .. " got: " .. o)
 end
 
@@ -66,15 +66,15 @@ local function test_getFileName()
     local o = ""
 
     filePath = "./src/somefolder/index.html"
-    o = FS.getFileName(filePath)
+    o = PATH.getFileName(filePath)
     assert(o == "index.html",
-        "Function FS.getFileName(filePath) test failed:"
+        "Function PATH.getFileName(filePath) test failed:"
         .. " filePath: " .. filePath .. " got: " .. o)
 
     filePath = "./src/somefolder/"
-    o = FS.getFileName(filePath)
+    o = PATH.getFileName(filePath)
     assert(o == nil,
-        "Function FS.getFileName(filePath) test failed:"
+        "Function PATH.getFileName(filePath) test failed:"
         .. " filePath: " .. filePath)
 end
 
@@ -83,9 +83,9 @@ local function test_getFolderPath()
     local o = ""
 
     filePath = "./src/somefolder/index.html"
-    o = FS.getFolderPath(filePath)
+    o = PATH.getFolderPath(filePath)
     assert(o == "./src/somefolder/",
-        "Function FS.getFolderPath(filePath) test failed:"
+        "Function PATH.getFolderPath(filePath) test failed:"
         .. " filePath: " .. filePath .. " got: " .. o)
 end
 
@@ -94,15 +94,15 @@ end
 
 
 local function run_tests()
-    print("Testing FS.concatPaths(lhs, rhs)..")
+    print("Testing PATH.concatPaths(lhs, rhs)..")
     test_concatPaths()
-    print("Testing FS.getFileName(filePath)..")
+    print("Testing PATH.getFileName(filePath)..")
     test_getFileName()
-    print("Testing FS.getFolderPath(filePath)..")
+    print("Testing PATH.getFolderPath(filePath)..")
     test_getFolderPath()
     print("Testing template command {{!filepath filepath}}..")
     test_templateCommand_filepath()
-    print("Testing FS.convertToRelativePath()..")
+    print("Testing PATH.convertToRelativePath()..")
     test_convertToRelativePath()
 
     print("\nTests passed !")

@@ -3,6 +3,7 @@ CONFIG = {
     dist_folder = "./dist",
 }
 
+
 --FS
 FS = {
     LSOPTION = {
@@ -10,95 +11,6 @@ FS = {
         FILES = {},
     },
 }
-
-function FS.getFileName(filePath)
-    local fileNameOffset = filePath:find("/[^/]*$")
-    if fileNameOffset ~= nil then
-        fileNameOffset = fileNameOffset + 1
-    else
-        fileNameOffset = 0
-    end
-    local output = filePath:sub(fileNameOffset)
-    if output == "" then return nil
-    else return output
-    end
-end
-
-function FS.getFolderPath(filePath)
-    return filePath:gsub("/[^/]*$", "") .. '/'
-end
-function FS.getPathBuilder(filepath)
-    if filepath == nil then return nil end
-    local pathBuilder = {}
-    for folderName in string.gmatch(FS.getFolderPath(filepath), "[^/]*/") do
-        table.insert(pathBuilder, folderName)
-    end
-    local filename = FS.getFileName(filepath)
-    if filename ~= nil then
-        table.insert(pathBuilder, filename)
-    end
-    return pathBuilder
-end
-
-function FS.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
-    if absoluteFilePath == nil or relativeToFolderPath == nil then return nil end
-    local pathBuilder = {}
-    local afpPathBuilder = FS.getPathBuilder(FS.getFolderPath(absoluteFilePath))
-    local rtfpPathBuilder = FS.getPathBuilder(FS.getFolderPath(relativeToFolderPath))
-    local offsetToAppendTheRest = nil
-    for k, v in pairs(rtfpPathBuilder) do
-        if v == afpPathBuilder[k] then
-            offsetToAppendTheRest = k + 1
-        else
-            table.insert(pathBuilder, "../")
-        end
-    end
-    for i = offsetToAppendTheRest, #afpPathBuilder, 1 do
-        table.insert(pathBuilder, afpPathBuilder[i])
-    end
-
-    table.insert(pathBuilder, FS.getFileName(absoluteFilePath))
-
-    local output = ""
-    for _, folderName in pairs(pathBuilder) do
-        output = output .. folderName
-    end
-
-    return output
-end
-
-function FS.concatPaths(lhs, rhs)
-    if lhs == '' then return rhs end
-    if lhs:find("%.%.") ~= nil then return nil end
-    --simple concat
-    if rhs:find("%.%.") == nil then
-        if lhs:sub(-1) == '/' then
-            return lhs .. rhs
-        end
-        return lhs .. '/' .. rhs
-    end
-
-    --complex concat
-    local pathBuilder = {}
-    for folderName in lhs:gmatch("[^/]*/") do
-        table.insert(pathBuilder, folderName)
-    end
-    for folderName in rhs:gmatch("[^/]*/") do
-        if folderName == "../" then
-            table.remove(pathBuilder)
-        else
-            table.insert(pathBuilder, folderName)
-        end
-    end
-    local rhsFileName = FS.getFileName(rhs)
-    if rhsFileName == nil then return nil end
-    table.insert(pathBuilder, FS.getFileName(rhs))
-    local output = ""
-    for _, folderName in pairs(pathBuilder) do
-        output = output .. folderName
-    end
-    return output
-end
 
 function FS.mkdir(folderPath)
     local mkdirUnix = string.format("mkdir -p %s", folderPath)
@@ -136,10 +48,105 @@ end
 
 --FS end
 
+--PATH
+PATH = {}
+
+function PATH.getFileName(filePath)
+    local fileNameOffset = filePath:find("/[^/]*$")
+    if fileNameOffset ~= nil then
+        fileNameOffset = fileNameOffset + 1
+    else
+        fileNameOffset = 0
+    end
+    local output = filePath:sub(fileNameOffset)
+    if output == "" then return nil
+    else return output
+    end
+end
+
+function PATH.getFolderPath(filePath)
+    return filePath:gsub("/[^/]*$", "") .. '/'
+end
+
+function PATH.getPathBuilder(filepath)
+    if filepath == nil then return nil end
+    local pathBuilder = {}
+    for folderName in string.gmatch(PATH.getFolderPath(filepath), "[^/]*/") do
+        table.insert(pathBuilder, folderName)
+    end
+    local filename = PATH.getFileName(filepath)
+    if filename ~= nil then
+        table.insert(pathBuilder, filename)
+    end
+    return pathBuilder
+end
+
+function PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
+    if absoluteFilePath == nil or relativeToFolderPath == nil then return nil end
+    local pathBuilder = {}
+    local afpPathBuilder = PATH.getPathBuilder(PATH.getFolderPath(absoluteFilePath))
+    local rtfpPathBuilder = PATH.getPathBuilder(PATH.getFolderPath(relativeToFolderPath))
+    local offsetToAppendTheRest = nil
+    for k, v in pairs(rtfpPathBuilder) do
+        if v == afpPathBuilder[k] then
+            offsetToAppendTheRest = k + 1
+        else
+            table.insert(pathBuilder, "../")
+        end
+    end
+    for i = offsetToAppendTheRest, #afpPathBuilder, 1 do
+        table.insert(pathBuilder, afpPathBuilder[i])
+    end
+
+    table.insert(pathBuilder, PATH.getFileName(absoluteFilePath))
+
+    local output = ""
+    for _, folderName in pairs(pathBuilder) do
+        output = output .. folderName
+    end
+
+    return output
+end
+
+function PATH.concatPaths(lhs, rhs)
+    if lhs == '' then return rhs end
+    if lhs:find("%.%.") ~= nil then return nil end
+    --simple concat
+    if rhs:find("%.%.") == nil then
+        if lhs:sub(-1) == '/' then
+            return lhs .. rhs
+        end
+        return lhs .. '/' .. rhs
+    end
+
+    --complex concat
+    local pathBuilder = {}
+    for folderName in lhs:gmatch("[^/]*/") do
+        table.insert(pathBuilder, folderName)
+    end
+    for folderName in rhs:gmatch("[^/]*/") do
+        if folderName == "../" then
+            table.remove(pathBuilder)
+        else
+            table.insert(pathBuilder, folderName)
+        end
+    end
+    local rhsFileName = PATH.getFileName(rhs)
+    if rhsFileName == nil then return nil end
+    table.insert(pathBuilder, PATH.getFileName(rhs))
+    local output = ""
+    for _, folderName in pairs(pathBuilder) do
+        output = output .. folderName
+    end
+    return output
+end
+
+--PATH end
+
 local hashCommands = {
     ["include"] = function(filePath, currentFilename) --{{#include filepath}}
-        print("INLUDE; ", filePath .. "dupa; " .. FS.getFolderPath(currentFilename))
-        local templatefilePath = FS.concatPaths(FS.getFolderPath(currentFilename), filePath)
+        print("INLUDE; ", filePath .. "dupa; " .. PATH.getFolderPath(currentFilename))
+        local templatefilePath = PATH.concatPaths(PATH.getFolderPath(currentFilename), filePath)
         local f = io.open(templatefilePath, "r")
         if f == nil then
             print("FILE NOT FOUND " .. templatefilePath)
@@ -170,8 +177,8 @@ local hashCommands = {
 
 local templateCommands = {
     ["filepath"] = function(templateFilePath, filePathRelativeToTemplate, filePathOfTemplateHost) --{{!filepath templatePOVPath}}
-        local globalPath = FS.concatPaths(FS.getFolderPath(templateFilePath), filePathRelativeToTemplate)
-        local output = FS.convertToRelativePath(globalPath, FS.getFolderPath(filePathOfTemplateHost))
+        local globalPath = PATH.concatPaths(PATH.getFolderPath(templateFilePath), filePathRelativeToTemplate)
+        local output = PATH.convertToRelativePath(globalPath, PATH.getFolderPath(filePathOfTemplateHost))
         return output
     end
 }
@@ -225,17 +232,17 @@ local function openFolderAndPerformOperations(folderPath)
     local files = FS.ls(FS.LSOPTION.FILES, folderPath)
     if files then
         for _,filename in pairs(files) do
-            fileOperations(FS.concatPaths(folderPath, filename))
+            fileOperations(PATH.concatPaths(folderPath, filename))
         end
     end
 
     local folders = FS.ls(FS.LSOPTION.FOLDERS, folderPath)
     if folders == nil then return end
     for _,foldername in pairs(folders) do
-        FS.mkdir(string.gsub(FS.concatPaths(folderPath, foldername), CONFIG.src_folder, CONFIG.dist_folder, 1))
-        openFolderAndPerformOperations(FS.concatPaths(folderPath, foldername))
+        FS.mkdir(string.gsub(PATH.concatPaths(folderPath, foldername), CONFIG.src_folder, CONFIG.dist_folder, 1))
+        openFolderAndPerformOperations(PATH.concatPaths(folderPath, foldername))
     end
 end
 
 
-openFolderAndPerformOperations(CONFIG.src_folder)
+--openFolderAndPerformOperations(CONFIG.src_folder)
