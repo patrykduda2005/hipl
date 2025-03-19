@@ -1,17 +1,24 @@
+---@alias pathbuilder table path separated into array by folders
+---@alias absolutepath string forward slashed path relative to lua script
+
 CONFIG = {
     src_folder = "./src",
     dist_folder = "./dist",
 }
 
 
---FS
+---@class fs
 FS = {
+    ---@enum lsoption
     LSOPTION = {
-        FOLDERS = {},
-        FILES = {},
+        FOLDERS = 0,
+        FILES = 1,
     },
 }
 
+---Creates folder with a shell command that should work on Windows and POSIX systems
+---@param folderPath absolutepath
+---@return file*? command output
 function FS.mkdir(folderPath)
     local mkdirUnix = string.format("mkdir -p %s", folderPath)
     local folderPathWindows = folderPath:gsub("/", "\\")
@@ -21,6 +28,10 @@ function FS.mkdir(folderPath)
     return command
 end
 
+---Lists files or folders in path in a way that should work on Windows and POSIX systems
+---@param type lsoption list files or list folders
+---@param path absolutepath
+---@return table|nil table of found elements
 function FS.ls(type, path)
     local output = {}
     local command_output = nil
@@ -45,12 +56,14 @@ function FS.ls(type, path)
     command_output:close()
     return output
 end
+--fs end
 
---FS end
-
---PATH
+---@class path
 PATH = {}
 
+---Get name of file from path
+---@param filePath string
+---@return string|nil
 function PATH.getFileName(filePath)
     local fileNameOffset = filePath:find("/[^/]*$")
     if fileNameOffset ~= nil then
@@ -64,10 +77,16 @@ function PATH.getFileName(filePath)
     end
 end
 
+---Get folder path from path
+---@param filePath string
+---@return string
 function PATH.getFolderPath(filePath)
     return filePath:gsub("/[^/]*$", "") .. '/'
 end
 
+---Create path builder
+---@param filepath string
+---@return pathbuilder|nil
 function PATH.getPathBuilder(filepath)
     if filepath == nil then return nil end
     local pathBuilder = {}
@@ -81,11 +100,16 @@ function PATH.getPathBuilder(filepath)
     return pathBuilder
 end
 
+---Convert relative path to lua script to relative path of relativeToFolderPath
+---@param absoluteFilePath absolutepath
+---@param relativeToFolderPath absolutepath
+---@return string|nil
 function PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
     if absoluteFilePath == nil or relativeToFolderPath == nil then return nil end
     local pathBuilder = {}
     local afpPathBuilder = PATH.getPathBuilder(PATH.getFolderPath(absoluteFilePath))
     local rtfpPathBuilder = PATH.getPathBuilder(PATH.getFolderPath(relativeToFolderPath))
+    if afpPathBuilder == nil or rtfpPathBuilder == nil then return nil end
     local offsetToAppendTheRest = nil
     for k, v in pairs(rtfpPathBuilder) do
         if v == afpPathBuilder[k] then
@@ -108,6 +132,10 @@ function PATH.convertToRelativePath(absoluteFilePath, relativeToFolderPath)
     return output
 end
 
+---Concatenate paths
+---@param lhs string
+---@param rhs string
+---@return string|nil
 function PATH.concatPaths(lhs, rhs)
     if lhs == '' then return rhs end
     if lhs:find("%.%.") ~= nil then return nil end
@@ -140,11 +168,14 @@ function PATH.concatPaths(lhs, rhs)
     end
     return output
 end
-
---PATH end
+--path end
 
 local hashCommands = {
-    ["include"] = function(filePath, currentFilename) --{{#include filepath}}
+    ---{{#include filepath}} html function that copies over template or other html file
+    ---@param filePath absolutepath
+    ---@param currentFilename absolutepath
+    ---@return string
+    ["include"] = function(filePath, currentFilename)
         print("INLUDE; ", filePath .. "dupa; " .. PATH.getFolderPath(currentFilename))
         local templatefilePath = PATH.concatPaths(PATH.getFolderPath(currentFilename), filePath)
         local f = io.open(templatefilePath, "r")
@@ -169,6 +200,10 @@ local hashCommands = {
         f:close()
         return includedContent
     end,
+    ---{{#sharedFile filepath}} html function that provides a pointer to not copied resource
+    ---@param filePath absolutepath
+    ---@param currentFilename absolutepath
+    ---@return string
     ["sharedFile"] = function(filePath, currentFilename) --{{#sharedFile filepath}}
         --don't copy over some files to save space
         return "TODO"
@@ -176,13 +211,25 @@ local hashCommands = {
 }
 
 local templateCommands = {
-    ["filepath"] = function(templateFilePath, filePathRelativeToTemplate, filePathOfTemplateHost) --{{!filepath templatePOVPath}}
+    ---{{!filepath templatePOVPath}} template function that ensures path is still valid after copying
+    ---@param templateFilePath absolutepath
+    ---@param filePathRelativeToTemplate string
+    ---@param filePathOfTemplateHost absolutepath
+    ---@return string
+    ["filepath"] = function(templateFilePath, filePathRelativeToTemplate, filePathOfTemplateHost)
         local globalPath = PATH.concatPaths(PATH.getFolderPath(templateFilePath), filePathRelativeToTemplate)
+        if globalPath == nil then return "" end
         local output = PATH.convertToRelativePath(globalPath, PATH.getFolderPath(filePathOfTemplateHost))
+        if output == nil then return "" end
         return output
     end
 }
 
+---Documentation TODO
+---@param thingy string entire {{command}} thingy without brackets
+---@param filename absolutepath filepath on which it is run
+---@param hostFilePath absolutepath filepath in which it is present
+---@return string
 function extractCommand(thingy, filename, hostFilePath) -- {{#command arg}} {{!command arg}}
     local commandType = thingy:sub(1,1)
     if commandType == "#" then
@@ -198,7 +245,8 @@ function extractCommand(thingy, filename, hostFilePath) -- {{#command arg}} {{!c
     end
 end
 
-
+---Copy over file and execute commands inside of it
+---@param filePath absolutepath
 local function compileFile(filePath)
     print("    File: ", filePath)
     local srcf = io.open(filePath, "r")
@@ -220,6 +268,8 @@ local function compileFile(filePath)
     end
 end
 
+---Filter template files
+---@param filePath absolutepath
 local function fileOperations(filePath)
     local isTemplate = string.match(filePath, ".*.hipl")
     if isTemplate == nil then
@@ -227,6 +277,8 @@ local function fileOperations(filePath)
     end
 end
 
+---Recursively copy over files
+---@param folderPath absolutepath
 local function openFolderAndPerformOperations(folderPath)
     print("PATH: " .. folderPath)
     local files = FS.ls(FS.LSOPTION.FILES, folderPath)
@@ -245,4 +297,4 @@ local function openFolderAndPerformOperations(folderPath)
 end
 
 
---openFolderAndPerformOperations(CONFIG.src_folder)
+openFolderAndPerformOperations(CONFIG.src_folder)
