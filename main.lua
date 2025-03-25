@@ -1,11 +1,10 @@
----@alias pathbuilder table path separated into array by folders
----@alias absolutepath string forward slashed path relative to lua script
-
 CONFIG = {
     src_folder = "./src",
     dist_folder = "./dist",
 }
 
+---@alias pathbuilder table path separated into array by folders
+---@alias absolutepath string forward slashed path relative to lua script; expected to look like ./path/to/file.html or ./path/to/folder/
 
 ---@class fs
 FS = {
