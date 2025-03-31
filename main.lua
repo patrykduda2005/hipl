@@ -1,6 +1,7 @@
 CONFIG = {
     src_folder = "./src",
     dist_folder = "./dist",
+    dry_run = false
 }
 
 ---@alias pathbuilder table path separated into array by folders
@@ -17,14 +18,19 @@ FS = {
 
 ---Creates folder with a shell command that should work on Windows and POSIX systems
 ---@param folderPath absolutepath
----@return file*? command output
+---@return boolean? command output
 function FS.mkdir(folderPath)
     local mkdirUnix = string.format("mkdir -p %s", folderPath)
-    local folderPathWindows = folderPath:gsub("/", "\\")
+    local folderPathWindows = folderPath:gsub("/", "\\\\")
     local mkdirWindows = string.format("mkdir%s 2>/dev/null", folderPathWindows)
-    print("MKDIR COMMAND: ", mkdirUnix)
-    local command = io.popen(string.format("%s || %s", mkdirWindows, mkdirUnix))
-    return command
+    print("Creating folder: ", folderPath)
+    if CONFIG.dry_run == false then
+        local command = os.execute(string.format("%s || %s", mkdirWindows, mkdirUnix))
+        return command
+    else
+        --TODO: check if command would fail
+        return true
+    end
 end
 
 ---Lists files or folders in path in a way that should work on Windows and POSIX systems
@@ -54,6 +60,20 @@ function FS.ls(type, path)
     end
     command_output:close()
     return output
+end
+
+---Creates file
+---@param filePath absolutepath
+function FS.touch(filePath)
+    local f = io.open(filePath, "r")
+    if f ~= nil then
+        print("Modifying file: " .. filePath)
+    else
+        print("Creating file: " .. filePath)
+    end
+    if CONFIG.dry_run == false then
+        f = io.open(filePath, "w")
+    end
 end
 --fs end
 
@@ -252,7 +272,7 @@ local function compileFile(filePath)
     if srcf == nil then return end
     local distfPath = filePath:gsub(CONFIG.src_folder, CONFIG.dist_folder, 1)
     --print("                      DIST FILE PATH: ", distfPath)
-    local distf = io.open(distfPath, "w")
+    local distf = FS.touch(distfPath)
     if distf == nil then return end
     io.output(distf)
 
