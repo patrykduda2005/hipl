@@ -1,7 +1,8 @@
 CONFIG = {
     src_folder = "./src",
     dist_folder = "./dist",
-    dry_run = false
+    dry_run = false,
+    shell = nil,
 }
 
 ---@alias pathbuilder table path separated into array by folders
@@ -14,7 +15,61 @@ FS = {
         FOLDERS = 0,
         FILES = 1,
     },
+    SHELL = nil,
 }
+
+---Determines what shell script is running on
+function FS.detectShell()
+    local checkIfPowershell = os.getenv("PSModulePath")
+    local checkIfPosix = os.getenv("SHELL")
+    local detectedShell = nil
+    if checkIfPowershell ~= nil then
+        detectedShell = "PowerShell"
+    elseif checkIfPosix ~= nil then
+        detectedShell = "POSIX"
+    end
+
+    if CONFIG.shell == "PowerShell" or CONFIG.shell == "POSIX" then
+        if CONFIG.shell == detectedShell then
+            print("Found " .. CONFIG.shell .. " in config. Setting it...")
+            FS.SHELL = CONFIG.shell
+        else 
+            print("[WARNING] Detected " .. detectedShell .. ", but config is set to " .. CONFIG.shell .. "... Using " .. CONFIG.shell)
+            FS.SHELL = CONFIG.shell
+        end
+        return
+    end
+
+    if CONFIG.shell ~= nil then
+        print("Wrong shell option (" .. CONFIG.shell .. ") in config. Expected PowerShell or POSIX")
+    end
+
+    print("Found " .. detectedShell .. ". Is it correct (y/n)?")
+    res = io.read()
+    if res == "y" then
+        print("Setting " .. detectedShell .. " then...")
+        FS.SHELL = detectedShell
+        return
+    end
+
+    print("Is it 1-PowerShell or 2-POSIX (1/2)?")
+    res = io.read()
+    if res == "1" then
+        FS.SHELL = "PowerShell"
+        print("Setting " .. FS.SHELL .. " then...")
+    elseif res == "2" then
+        FS.SHELL = "POSIX"
+        print("Setting " .. FS.SHELL .. " then...")
+    else
+        print("Invalid input. Exiting...")
+        os.exit()
+    end
+
+    if FS.SHELL == nil then
+        print("Detection failed. Advise the script's author")
+        os.exit()
+    end
+end
 
 ---Creates folder with a shell command that should work on Windows and POSIX systems
 ---@param folderPath absolutepath
