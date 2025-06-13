@@ -16,7 +16,13 @@ FS = {
         FILES = 1,
     },
     SHELL = nil,
+    PSPIPE = nil,
 }
+
+local function unreachable(msg)
+    print("Reached unreachable in code \"" .. msg .. "\"")
+    os.exit()
+end
 
 ---Determines what shell script is running on
 function FS.detectShell()
@@ -37,6 +43,9 @@ function FS.detectShell()
             print("[WARNING] Detected " .. detectedShell .. ", but config is set to " .. CONFIG.shell .. "... Using " .. CONFIG.shell)
             FS.SHELL = CONFIG.shell
         end
+        if detectedShell == "PowerShell" then 
+            FS.PSPIPE = io.popen("powershell -command -", "w")
+        end
         return
     end
 
@@ -49,6 +58,9 @@ function FS.detectShell()
     if res == "y" then
         print("Setting " .. detectedShell .. " then...")
         FS.SHELL = detectedShell
+        if detectedShell == "PowerShell" then 
+            FS.PSPIPE = io.popen("powershell -command -", "w")
+        end
         return
     end
 
@@ -56,6 +68,7 @@ function FS.detectShell()
     res = io.read()
     if res == "1" then
         FS.SHELL = "PowerShell"
+        FS.PSPIPE = io.popen("powershell -command -", "w")
         print("Setting " .. FS.SHELL .. " then...")
     elseif res == "2" then
         FS.SHELL = "POSIX"
@@ -73,18 +86,26 @@ end
 
 ---Creates folder with a shell command that should work on Windows and POSIX systems
 ---@param folderPath absolutepath
----@return boolean? command output
 function FS.mkdir(folderPath)
     local mkdirUnix = string.format("mkdir -p %s", folderPath)
-    local folderPathWindows = folderPath:gsub("/", "\\\\")
-    local mkdirWindows = string.format("mkdir%s 2>/dev/null", folderPathWindows)
+    local mkdirPowerShell = string.format("New-Item -Name '%s' -ItemType 'Directory'", folderPath)
     print("Creating folder: ", folderPath)
-    if CONFIG.dry_run == false then
-        local command = os.execute(string.format("%s || %s", mkdirWindows, mkdirUnix))
-        return command
-    else
+    if CONFIG.dry_run == true then
         --TODO: check if command would fail
-        return true
+        return
+    end
+
+    if FS.SHELL == "POSIX" then
+        local command = os.execute(mkdirUnix)
+    elseif FS.SHELL == "PowerShell" then
+        FS.PSPIPE:write(mkdirPowerShell)
+        --local command = os.execute(mkdirPowerShell)
+    else
+        unreachable("Non-exhaustive mkdir shell switch")
+    end
+
+    if command == false then
+        print("mkdir failed, please check shell configuration. Exiting..")
     end
 end
 
@@ -95,15 +116,23 @@ end
 function FS.ls(type, path)
     local output = {}
     local command_output = nil
+    local findFilesPowerShell = ""
+    local findFilesUnix = ""
 
     if type == FS.LSOPTION.FILES then
-        local findFilesWindows = string.format("dir/a:-d /b %s 2>/dev/null", path)
-        local findFilesUnix = string.format("ls -p %s | grep -v /", path)
-        command_output = io.popen(string.format("%s || %s", findFilesWindows, findFilesUnix))
+        findFilesPowerShell = string.format("powershell -Command - Get-ChildItem -Name -Attributes !Directory %s", path)
+        findFilesUnix = string.format("ls -p %s | grep -v /", path)
     elseif type == FS.LSOPTION.FOLDERS then
-        local findFoldersWindows = string.format("dir/a:d /b %s 2>/dev/null", path)
-        local findFoldersUnix = string.format("ls -p %s | grep /", path)
-        command_output = io.popen(string.format("%s || %s", findFoldersWindows, findFoldersUnix))
+        findFilesPowerShell = string.format("powershell -Command - Get-ChildItem -Name -Attributes Directory %s", path)
+        findFoldersUnix = string.format("ls -p %s | grep /", path)
+    end
+
+    if FS.SHELL == "POSIX" then
+        command_output = io.popen(findFilesUnix)
+    elseif FS.SHELL == "PowerShell" then
+        command_output = io.popen(findFilesPowerShell)
+    else
+        unreachable("Non-exhaustive ls shell switch")
     end
 
     if command_output == nil then return nil end

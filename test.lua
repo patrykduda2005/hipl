@@ -270,6 +270,7 @@ function unit_test.testall()
         end
     end
     for _, v in pairs(unit_test.FS) do
+        FS.detectShell()
         if type(v) == "function" and v ~= debug.getinfo(1).func then
             v()
         end
