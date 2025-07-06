@@ -124,7 +124,7 @@ function FS.ls(type, path)
         findFilesUnix = string.format("ls -p %s | grep -v /", path)
     elseif type == FS.LSOPTION.FOLDERS then
         findFilesPowerShell = string.format("powershell -Command - Get-ChildItem -Name -Attributes Directory %s", path)
-        findFoldersUnix = string.format("ls -p %s | grep /", path)
+        findFilesUnix = string.format("ls -p %s | grep /", path)
     end
 
     if FS.SHELL == "POSIX" then
@@ -394,6 +394,7 @@ local function openFolderAndPerformOperations(folderPath)
     local folders = FS.ls(FS.LSOPTION.FOLDERS, folderPath)
     if folders == nil then return end
     for _,foldername in pairs(folders) do
+        print(foldername)
         FS.mkdir(string.gsub(PATH.concatPaths(folderPath, foldername), CONFIG.src_folder, CONFIG.dist_folder, 1))
         openFolderAndPerformOperations(PATH.concatPaths(folderPath, foldername))
     end
