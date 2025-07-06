@@ -1,1 +1,4 @@
 /testfiles/
+src/
+dist/
+.test_folder

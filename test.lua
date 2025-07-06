@@ -1,7 +1,6 @@
-local main = require "./main"
-
 ---@class test helper functions for testing
-local test = {}
+test = {}
+local main = require "./main"
 
 ---Check if statement is true otherwise print error message
 ---@param statement boolean

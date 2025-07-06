@@ -400,4 +400,7 @@ local function openFolderAndPerformOperations(folderPath)
 end
 
 
-openFolderAndPerformOperations(CONFIG.src_folder)
+if test == nil then
+    FS.detectShell()
+    openFolderAndPerformOperations(CONFIG.src_folder)
+end
