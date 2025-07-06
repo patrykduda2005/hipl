@@ -148,6 +148,7 @@ end
 
 ---Creates file
 ---@param filePath absolutepath
+---@return file*|nil
 function FS.touch(filePath)
     local f = io.open(filePath, "r")
     if f ~= nil then
@@ -157,7 +158,9 @@ function FS.touch(filePath)
     end
     if CONFIG.dry_run == false then
         f = io.open(filePath, "w")
+        return f
     end
+    return nil
 end
 --fs end
 
@@ -332,7 +335,7 @@ local templateCommands = {
 ---@param thingy string entire {{command}} thingy without brackets
 ---@param filename absolutepath filepath on which it is run
 ---@param hostFilePath absolutepath filepath in which it is present
----@return string
+---@return string|nil
 function extractCommand(thingy, filename, hostFilePath) -- {{#command arg}} {{!command arg}}
     local commandType = thingy:sub(1,1)
     if commandType == "#" then
@@ -346,6 +349,7 @@ function extractCommand(thingy, filename, hostFilePath) -- {{#command arg}} {{!c
         local commandArgs = thingy:sub(middle+1)
         return templateCommands[command](filename, commandArgs, hostFilePath)
     end
+    return nil
 end
 
 ---Copy over file and execute commands inside of it
@@ -360,22 +364,32 @@ local function compileFile(filePath)
     if distf == nil then return end
     io.output(distf)
 
+    print("siema ---------------------------------------------------------------------")
+    -- So the problem is that file could not have text e.g. png or binary
+    -- how to copy it over ?
     for line in srcf:lines() do
-        local replacementLine = line
+        local replacementLine = line .. "\n"
         local start, ending = line:find("{{.*}}")
         if start then
             local withoutBrackets = line:sub(start+2, ending-2)
-            replacementLine = extractCommand(withoutBrackets, filePath, filePath)
+            print("oooo")
+            local extracted = extractCommand(withoutBrackets, filePath, filePath)
+            if extracted ~= nil then
+                replacementLine = extracted .. "\n"
+            end
         end
-        io.write(replacementLine .. "\n")
+        io.write(replacementLine)
     end
 end
 
 ---Filter template files
 ---@param filePath absolutepath
 local function fileOperations(filePath)
-    local isTemplate = string.match(filePath, ".*.hipl")
-    if isTemplate == nil then
+    local blacklist = {
+        ".*.hipl", ".*.png"
+    }
+    local isBlacklisted = string.match(filePath, ".*.hipl")
+    if isBlacklisted == nil then
         compileFile(filePath)
     end
 end
