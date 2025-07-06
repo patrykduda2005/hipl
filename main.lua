@@ -162,6 +162,32 @@ function FS.touch(filePath)
     end
     return nil
 end
+
+---Copy files
+---@param filePath string
+---@param destPath string
+function FS.cp(filePath, destPath)
+    local cpUnix = string.format("cp %s %s", filePath, destPath)
+    local cpPowerShell = string.format("exit") --TODO: command in windows
+    local command
+    print("Copying file from", filePath, "to", destPath)
+    if CONFIG.dry_run == true then
+        --TODO: check if command would fail
+        return
+    end
+
+    if FS.SHELL == "POSIX" then
+        command = os.execute(cpUnix)
+    elseif FS.SHELL == "PowerShell" then
+        FS.PSPIPE:write(cpPowerShell)
+    else
+        unreachable("Non-exhaustive cp shell switch")
+    end
+
+    if command == false then
+        print("cp failed, please check shell configuration. Exiting..")
+    end
+end
 --fs end
 
 ---@class path
@@ -359,14 +385,17 @@ local function compileFile(filePath)
     local srcf = io.open(filePath, "r")
     if srcf == nil then return end
     local distfPath = filePath:gsub(CONFIG.src_folder, CONFIG.dist_folder, 1)
-    --print("                      DIST FILE PATH: ", distfPath)
     local distf = FS.touch(distfPath)
     if distf == nil then return end
     io.output(distf)
 
-    print("siema ---------------------------------------------------------------------")
     -- So the problem is that file could not have text e.g. png or binary
     -- how to copy it over ?
+    -- should i just make a list of extensions ?
+    if string.match(filePath, ".*.png") ~= nil or string.match(filePath, ".*.jpg") ~= nil then
+        FS.cp(filePath, distfPath)
+        return
+    end
     for line in srcf:lines() do
         local replacementLine = line .. "\n"
         local start, ending = line:find("{{.*}}")

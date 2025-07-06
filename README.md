@@ -13,3 +13,6 @@ at root of the project.
 ## HTML commands
 - `{{#include filepath}}` allows to include another html file
 - `{{!filepath templatePOVPath}}` needed in included file to ensure that path is still valid to resource
+
+## Known bugs
+- commands in the same line don't work because of greedy regex matching
